@@ -1,12 +1,12 @@
 use std::env;
 use std::fs;
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 use regex::Regex;
 use walkdir::WalkDir;
 use std::collections::HashMap;
 use std::collections::HashSet;
-
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -27,22 +27,51 @@ fn main() {
     let (file_count, total_non_blank_non_comment_lines) = count_files_and_lines(&workspace_path);
     let module_structure = analyze_modules(&workspace_path);
 
-    // Print results
+    // Print high-level results
     println!("Total Rust source files: {}", file_count);
     println!("Total non-blank and non-commented lines: {}", total_non_blank_non_comment_lines);
-    println!("\nModule structure:");
-    for (module, files) in module_structure {
-        println!("Module: {}", module);
-        for (file, (line_count, functions, data_structures)) in files {
-            println!("  File: {} ({} lines)", file, line_count);
-            println!("    Functions:");
-            for function in functions {
-                println!("      {}", function);
+    println!("\nModules:");
+
+    let modules: Vec<String> = module_structure.keys().cloned().collect();
+    for (i, module) in modules.iter().enumerate() {
+        println!("  {}. {} ({} lines)", i + 1, module, total_lines_in_module(&module_structure, module));
+    }
+
+    // Interactive CLI
+    loop {
+        print!("Enter the number of the module to view details, or 'q' to quit: ");
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input).unwrap();
+        let input = input.trim();
+
+        if input == "q" {
+            break;
+        }
+
+        if let Ok(selection) = input.parse::<usize>() {
+            if selection > 0 && selection <= modules.len() {
+                let selected_module = &modules[selection - 1];
+                println!("\nModule: {}", selected_module);
+                if let Some(files) = module_structure.get(selected_module) {
+                    for (file, (line_count, functions, data_structures)) in files {
+                        println!("  File: {} ({} lines)", file, line_count);
+                        println!("    Functions:");
+                        for function in functions {
+                            println!("      {}", function);
+                        }
+                        println!("    Data structures:");
+                        for (structure, count) in data_structures {
+                            println!("      {}: {} times", structure, count);
+                        }
+                    }
+                }
+            } else {
+                println!("Invalid selection. Please try again.");
             }
-            println!("    Data structures:");
-            for (structure, count) in data_structures {
-                println!("      {}: {} times", structure, count);
-            }
+        } else {
+            println!("Invalid input. Please enter a number or 'q' to quit.");
         }
     }
 }
@@ -130,4 +159,12 @@ fn analyze_modules(path: &Path) -> HashMap<String, HashMap<String, (usize, Vec<S
     }
 
     module_structure
+}
+
+fn total_lines_in_module(module_structure: &HashMap<String, HashMap<String, (usize, Vec<String>, Vec<(String, usize)>)>>, module: &str) -> usize {
+    if let Some(files) = module_structure.get(module) {
+        files.values().map(|(line_count, _, _)| *line_count).sum()
+    } else {
+        0
+    }
 }
