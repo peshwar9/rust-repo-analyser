@@ -3,6 +3,8 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 use walkdir::WalkDir;
+use regex::Regex;
+
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -37,6 +39,11 @@ fn main() {
     for (file_path, line_count) in line_counts {
         println!("{}:{}", file_path, line_count)
     }
+    let struct_declarations = extract_struct_declarations(&workspace_path);
+    for (file_path, declaration) in struct_declarations {
+        println!("{}: {}", file_path, declaration);
+    }
+
     //println!("Total non-blank and non-commented lines: {}", line_count);
 }
 
@@ -78,4 +85,24 @@ fn count_files_and_lines(path: &Path) -> (usize, Vec<(String, usize)>) {
         }
     }
     (file_count, line_counts)
+}
+
+fn extract_struct_declarations(path: &Path) -> Vec<(String, String)> {
+    let mut struct_declarations = Vec::new();
+    let struct_regex = Regex::new(r"(?s)struct\s+(\w+)\s*\{[^}]*\}").unwrap();
+
+    for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
+        if entry.path().extension().map_or(false, |ext| ext == "rs") {
+            let file_path = entry.path().strip_prefix(path).unwrap().to_str().unwrap().to_string();
+            let content = fs::read_to_string(entry.path()).expect("Failed to read file");
+
+            for captures in struct_regex.captures_iter(&content) {
+                let struct_name = captures.get(1).unwrap().as_str().to_string();
+                let struct_declaration = captures.get(0).unwrap().as_str().to_string();
+                struct_declarations.push((file_path.clone(), struct_declaration));
+            }
+        }
+    }
+
+    struct_declarations
 }
