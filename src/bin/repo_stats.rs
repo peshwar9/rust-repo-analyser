@@ -1,9 +1,10 @@
 use std::env;
-use std::fs;
+use std::fs::{self, File};
 use std::path::Path;
 use std::process::Command;
 use walkdir::WalkDir;
 use regex::Regex;
+use std::io::Write;
 
 
 fn main() {
@@ -39,10 +40,8 @@ fn main() {
     for (file_path, line_count) in line_counts {
         println!("{}:{}", file_path, line_count)
     }
-    let struct_declarations = extract_struct_declarations(&workspace_path);
-    for (file_path, declaration) in struct_declarations {
-        println!("{}: {}", file_path, declaration);
-    }
+    extract_struct_declarations(&workspace_path, "struct_declarations.txt");
+
 
     //println!("Total non-blank and non-commented lines: {}", line_count);
 }
@@ -87,9 +86,10 @@ fn count_files_and_lines(path: &Path) -> (usize, Vec<(String, usize)>) {
     (file_count, line_counts)
 }
 
-fn extract_struct_declarations(path: &Path) -> Vec<(String, String)> {
+fn extract_struct_declarations(path: &Path, output_file: &str) -> std::io::Result<()> {
     let mut struct_declarations = Vec::new();
     let struct_regex = Regex::new(r"(?s)struct\s+(\w+)\s*\{[^}]*\}").unwrap();
+    let mut output = File::create(output_file)?;
 
     for entry in WalkDir::new(path).into_iter().filter_map(|e| e.ok()) {
         if entry.path().extension().map_or(false, |ext| ext == "rs") {
@@ -99,10 +99,16 @@ fn extract_struct_declarations(path: &Path) -> Vec<(String, String)> {
             for captures in struct_regex.captures_iter(&content) {
                 let struct_name = captures.get(1).unwrap().as_str().to_string();
                 let struct_declaration = captures.get(0).unwrap().as_str().to_string();
+
+                writeln!(output, "File: {}", file_path)?;
+                writeln!(output, "Struct Name: {}", struct_name)?;
+                writeln!(output, "Declaration:\n{}\n", struct_declaration)?;
+                writeln!(output,"------------------------------\n")?;
+
                 struct_declarations.push((file_path.clone(), struct_declaration));
             }
         }
     }
 
-    struct_declarations
+Ok(())
 }

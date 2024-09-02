@@ -1,0 +1,650 @@
+File: session.rs
+Struct Name: Encrypted
+Declaration:
+struct Encrypted {
+    pub state: EncryptedState,
+
+    // It's always Some, except when we std::mem::replace it temporarily.
+    pub exchange: Option<Exchange>,
+    pub kex: Box<dyn KexAlgorithm + Send>,
+    pub key: usize,
+    pub client_mac: mac::Name,
+    pub server_mac: mac::Name,
+    pub session_id: CryptoVec,
+    pub rekey: Option<Kex>,
+    pub channels: HashMap<ChannelId, ChannelParams>,
+    pub last_channel_id: Wrapping<u32>,
+    pub write: CryptoVec,
+    pub write_cursor: usize,
+    pub last_rekey: std::time::Instant,
+    pub server_compression: crate::compression::Compression,
+    pub client_compression: crate::compression::Compression,
+    pub compress: crate::compression::Compress,
+    pub decompress: crate::compression::Decompress,
+    pub compress_buffer: CryptoVec,
+}
+
+------------------------------
+
+File: session.rs
+Struct Name: Exchange
+Declaration:
+struct Exchange {
+    pub client_id: CryptoVec,
+    pub server_id: CryptoVec,
+    pub client_kex_init: CryptoVec,
+    pub server_kex_init: CryptoVec,
+    pub client_ephemeral: CryptoVec,
+    pub server_ephemeral: CryptoVec,
+}
+
+------------------------------
+
+File: session.rs
+Struct Name: KexInit
+Declaration:
+struct KexInit {
+    pub algo: Option<negotiation::Names>,
+    pub exchange: Exchange,
+    pub session_id: Option<CryptoVec>,
+    pub sent: bool,
+}
+
+------------------------------
+
+File: session.rs
+Struct Name: KexDh
+Declaration:
+struct KexDh {
+    pub exchange: Exchange,
+    pub names: negotiation::Names,
+    pub key: usize,
+    pub session_id: Option<CryptoVec>,
+}
+
+------------------------------
+
+File: session.rs
+Struct Name: KexDhDone
+Declaration:
+struct KexDhDone {
+    pub exchange: Exchange,
+    pub kex: Box<dyn KexAlgorithm + Send>,
+    pub key: usize,
+    pub session_id: Option<CryptoVec>,
+    pub names: negotiation::Names,
+}
+
+------------------------------
+
+File: session.rs
+Struct Name: NewKeys
+Declaration:
+struct NewKeys {
+    pub exchange: Exchange,
+    pub names: negotiation::Names,
+    pub kex: Box<dyn KexAlgorithm + Send>,
+    pub key: usize,
+    pub cipher: cipher::CipherPair,
+    pub session_id: CryptoVec,
+    pub sent: bool,
+}
+
+------------------------------
+
+File: parsing.rs
+Struct Name: OpenChannelMessage
+Declaration:
+struct OpenChannelMessage {
+    pub typ: ChannelType,
+    pub recipient_channel: u32,
+    pub recipient_window_size: u32,
+    pub recipient_maximum_packet_size: u32,
+}
+
+------------------------------
+
+File: parsing.rs
+Struct Name: TcpChannelInfo
+Declaration:
+struct TcpChannelInfo {
+    pub host_to_connect: String,
+    pub port_to_connect: u32,
+    pub originator_address: String,
+    pub originator_port: u32,
+}
+
+------------------------------
+
+File: parsing.rs
+Struct Name: StreamLocalChannelInfo
+Declaration:
+struct StreamLocalChannelInfo {
+    pub socket_path: String,
+}
+
+------------------------------
+
+File: parsing.rs
+Struct Name: ChannelOpenConfirmation
+Declaration:
+struct ChannelOpenConfirmation {
+    pub recipient_channel: u32,
+    pub sender_channel: u32,
+    pub initial_window_size: u32,
+    pub maximum_packet_size: u32,
+}
+
+------------------------------
+
+File: lib.rs
+Struct Name: SendError
+Declaration:
+struct SendError {}
+
+------------------------------
+
+File: lib.rs
+Struct Name: Limits
+Declaration:
+struct Limits {
+    pub rekey_write_limit: usize,
+    pub rekey_read_limit: usize,
+    pub rekey_time_limit: std::time::Duration,
+}
+
+------------------------------
+
+File: lib.rs
+Struct Name: ChannelParams
+Declaration:
+struct ChannelParams {
+    recipient_channel: u32,
+    sender_channel: ChannelId,
+    recipient_window_size: u32,
+    sender_window_size: u32,
+    recipient_maximum_packet_size: u32,
+    sender_maximum_packet_size: u32,
+    /// Has the other side confirmed the channel?
+    pub confirmed: bool,
+    wants_reply: bool,
+    pending_data: std::collections::VecDeque<(CryptoVec, Option<u32>, usize)>,
+    pending_eof: bool,
+    pending_close: bool,
+}
+
+------------------------------
+
+File: cipher/chacha20poly1305.rs
+Struct Name: SshChacha20Poly1305Cipher
+Declaration:
+struct SshChacha20Poly1305Cipher {}
+
+------------------------------
+
+File: cipher/chacha20poly1305.rs
+Struct Name: OpeningKey
+Declaration:
+struct OpeningKey {
+    k1: Key,
+    k2: Key,
+}
+
+------------------------------
+
+File: cipher/chacha20poly1305.rs
+Struct Name: SealingKey
+Declaration:
+struct SealingKey {
+    k1: Key,
+    k2: Key,
+}
+
+------------------------------
+
+File: cipher/clear.rs
+Struct Name: Clear
+Declaration:
+struct Clear {}
+
+------------------------------
+
+File: cipher/mod.rs
+Struct Name: CipherPair
+Declaration:
+struct CipherPair {
+    pub local_to_remote: Box<dyn SealingKey + Send>,
+    pub remote_to_local: Box<dyn OpeningKey + Send>,
+}
+
+------------------------------
+
+File: cipher/gcm.rs
+Struct Name: GcmCipher
+Declaration:
+struct GcmCipher {}
+
+------------------------------
+
+File: cipher/gcm.rs
+Struct Name: OpeningKey
+Declaration:
+struct OpeningKey {
+    nonce: GenericArray<u8, NonceSize>,
+    cipher: Aes256Gcm,
+}
+
+------------------------------
+
+File: cipher/gcm.rs
+Struct Name: SealingKey
+Declaration:
+struct SealingKey {
+    nonce: GenericArray<u8, NonceSize>,
+    cipher: Aes256Gcm,
+}
+
+------------------------------
+
+File: auth.rs
+Struct Name: AuthRequest
+Declaration:
+struct AuthRequest {
+    pub methods: MethodSet,
+    pub partial_success: bool,
+    pub current: Option<CurrentRequest>,
+    pub rejection_count: usize,
+}
+
+------------------------------
+
+File: kex/ecdh_nistp.rs
+Struct Name: EcdhNistP256KexType
+Declaration:
+struct EcdhNistP256KexType {}
+
+------------------------------
+
+File: kex/ecdh_nistp.rs
+Struct Name: EcdhNistP384KexType
+Declaration:
+struct EcdhNistP384KexType {}
+
+------------------------------
+
+File: kex/ecdh_nistp.rs
+Struct Name: EcdhNistP521KexType
+Declaration:
+struct EcdhNistP521KexType {}
+
+------------------------------
+
+File: kex/dh/groups.rs
+Struct Name: DhGroup
+Declaration:
+struct DhGroup {
+    pub(crate) prime: &'static [u8],
+    pub(crate) generator: usize,
+    pub(crate) exp_size: u64,
+}
+
+------------------------------
+
+File: kex/dh/groups.rs
+Struct Name: DH
+Declaration:
+struct DH {
+    prime_num: BigUint,
+    generator: usize,
+    exp_size: u64,
+    private_key: BigUint,
+    public_key: BigUint,
+    shared_secret: BigUint,
+}
+
+------------------------------
+
+File: kex/dh/mod.rs
+Struct Name: DhGroup1Sha1KexType
+Declaration:
+struct DhGroup1Sha1KexType {}
+
+------------------------------
+
+File: kex/dh/mod.rs
+Struct Name: DhGroup14Sha1KexType
+Declaration:
+struct DhGroup14Sha1KexType {}
+
+------------------------------
+
+File: kex/dh/mod.rs
+Struct Name: DhGroup14Sha256KexType
+Declaration:
+struct DhGroup14Sha256KexType {}
+
+------------------------------
+
+File: kex/dh/mod.rs
+Struct Name: DhGroup16Sha512KexType
+Declaration:
+struct DhGroup16Sha512KexType {}
+
+------------------------------
+
+File: kex/none.rs
+Struct Name: NoneKexType
+Declaration:
+struct NoneKexType {}
+
+------------------------------
+
+File: kex/none.rs
+Struct Name: NoneKexAlgorithm
+Declaration:
+struct NoneKexAlgorithm {}
+
+------------------------------
+
+File: kex/curve25519.rs
+Struct Name: Curve25519KexType
+Declaration:
+struct Curve25519KexType {}
+
+------------------------------
+
+File: kex/curve25519.rs
+Struct Name: Curve25519Kex
+Declaration:
+struct Curve25519Kex {
+    local_secret: Option<Scalar>,
+    shared_secret: Option<MontgomeryPoint>,
+}
+
+------------------------------
+
+File: server/session.rs
+Struct Name: Session
+Declaration:
+struct Session {
+    pub(crate) common: CommonSession<Arc<Config>>,
+    pub(crate) sender: Handle,
+    pub(crate) receiver: Receiver<Msg>,
+    pub(crate) target_window_size: u32,
+    pub(crate) pending_reads: Vec<CryptoVec>,
+    pub(crate) pending_len: u32,
+    pub(crate) channels: HashMap<ChannelId, ChannelRef>,
+    pub(crate) open_global_requests: VecDeque<GlobalRequestResponse>,
+}
+
+------------------------------
+
+File: server/session.rs
+Struct Name: Handle
+Declaration:
+struct Handle {
+    pub(crate) sender: Sender<Msg>,
+}
+
+------------------------------
+
+File: server/mod.rs
+Struct Name: Config
+Declaration:
+struct Config {
+    /// The server ID string sent at the beginning of the protocol.
+    pub server_id: SshId,
+    /// Authentication methods proposed to the client.
+    pub methods: auth::MethodSet,
+    /// The authentication banner, usually a warning message shown to the client.
+    pub auth_banner: Option<&'static str>,
+    /// Authentication rejections must happen in constant time for
+    /// security reasons. Russh does not handle this by default.
+    pub auth_rejection_time: std::time::Duration,
+    /// Authentication rejection time override for the initial "none" auth attempt.
+    /// OpenSSH clients will send an initial "none" auth to probe for authentication methods.
+    pub auth_rejection_time_initial: Option<std::time::Duration>,
+    /// The server's keys. The first key pair in the client's preference order will be chosen.
+    pub keys: Vec<key::KeyPair>,
+    /// The bytes and time limits before key re-exchange.
+    pub limits: Limits,
+    /// The initial size of a channel (used for flow control).
+    pub window_size: u32,
+    /// The maximal size of a single packet.
+    pub maximum_packet_size: u32,
+    /// Internal event buffer size
+    pub event_buffer_size: usize,
+    /// Lists of preferred algorithms.
+    pub preferred: Preferred,
+    /// Maximal number of allowed authentication attempts.
+    pub max_auth_attempts: usize,
+    /// Time after which the connection is garbage-collected.
+    pub inactivity_timeout: Option<std::time::Duration>,
+    /// If nothing is received from the client for this amount of time, send a keepalive message.
+    pub keepalive_interval: Option<std::time::Duration>,
+    /// If this many keepalives have been sent without reply, close the connection.
+    pub keepalive_max: usize,
+}
+
+------------------------------
+
+File: mac/none.rs
+Struct Name: NoMacAlgorithm
+Declaration:
+struct NoMacAlgorithm {}
+
+------------------------------
+
+File: mac/none.rs
+Struct Name: NoMac
+Declaration:
+struct NoMac {}
+
+------------------------------
+
+File: negotiation.rs
+Struct Name: Names
+Declaration:
+struct Names {
+    pub kex: kex::Name,
+    pub key: key::Name,
+    pub cipher: cipher::Name,
+    pub client_mac: mac::Name,
+    pub server_mac: mac::Name,
+    pub server_compression: compression::Compression,
+    pub client_compression: compression::Compression,
+    pub ignore_guessed: bool,
+    pub strict_kex: bool,
+}
+
+------------------------------
+
+File: negotiation.rs
+Struct Name: Preferred
+Declaration:
+struct Preferred {
+    /// Preferred key exchange algorithms.
+    pub kex: Cow<'static, [kex::Name]>,
+    /// Preferred host & public key algorithms.
+    pub key: Cow<'static, [key::Name]>,
+    /// Preferred symmetric ciphers.
+    pub cipher: Cow<'static, [cipher::Name]>,
+    /// Preferred MAC algorithms.
+    pub mac: Cow<'static, [mac::Name]>,
+    /// Preferred compression algorithms.
+    pub compression: Cow<'static, [compression::Name]>,
+}
+
+------------------------------
+
+File: sshbuffer.rs
+Struct Name: SSHBuffer
+Declaration:
+struct SSHBuffer {
+    pub buffer: CryptoVec,
+    pub len: usize, // next packet length.
+    pub bytes: usize,
+    // Sequence numbers are on 32 bits and wrap.
+    // https://tools.ietf.org/html/rfc4253#section-6.4
+    pub seqn: Wrapping<u32>,
+}
+
+------------------------------
+
+File: tests.rs
+Struct Name: Server
+Declaration:
+struct Server {
+        clients: Arc<Mutex<HashMap<(usize, ChannelId), super::server::Handle>>>,
+        id: usize,
+    }
+
+------------------------------
+
+File: tests.rs
+Struct Name: Client
+Declaration:
+struct Client {}
+
+------------------------------
+
+File: tests.rs
+Struct Name: Server
+Declaration:
+struct Server {}
+
+------------------------------
+
+File: tests.rs
+Struct Name: Client
+Declaration:
+struct Client {}
+
+------------------------------
+
+File: tests.rs
+Struct Name: ServerHandle
+Declaration:
+struct ServerHandle {
+            did_auth: Option<tokio::sync::oneshot::Sender<()>>,
+        }
+
+------------------------------
+
+File: tests.rs
+Struct Name: Client
+Declaration:
+struct Client {}
+
+------------------------------
+
+File: tests.rs
+Struct Name: ServerHandle
+Declaration:
+struct ServerHandle {
+            channel: Option<tokio::sync::oneshot::Sender<Channel<server::Msg>>>,
+        }
+
+------------------------------
+
+File: tests.rs
+Struct Name: Client
+Declaration:
+struct Client {}
+
+------------------------------
+
+File: tests.rs
+Struct Name: ServerHandle
+Declaration:
+struct ServerHandle {}
+
+------------------------------
+
+File: ssh_read.rs
+Struct Name: ReadSshIdBuffer
+Declaration:
+struct ReadSshIdBuffer {
+    pub buf: CryptoVec,
+    pub total: usize,
+    pub bytes_read: usize,
+    pub sshid_len: usize,
+}
+
+------------------------------
+
+File: client/mod.rs
+Struct Name: Session
+Declaration:
+struct Session {
+    common: CommonSession<Arc<Config>>,
+    receiver: Receiver<Msg>,
+    sender: UnboundedSender<Reply>,
+    channels: HashMap<ChannelId, ChannelRef>,
+    target_window_size: u32,
+    pending_reads: Vec<CryptoVec>,
+    pending_len: u32,
+    inbound_channel_sender: Sender<Msg>,
+    inbound_channel_receiver: Receiver<Msg>,
+    open_global_requests: VecDeque<GlobalRequestResponse>,
+}
+
+------------------------------
+
+File: client/mod.rs
+Struct Name: Prompt
+Declaration:
+struct Prompt {
+    pub prompt: String,
+    pub echo: bool,
+}
+
+------------------------------
+
+File: client/mod.rs
+Struct Name: RemoteDisconnectInfo
+Declaration:
+struct RemoteDisconnectInfo {
+    pub reason_code: crate::Disconnect,
+    pub message: String,
+    pub lang_tag: String,
+}
+
+------------------------------
+
+File: client/mod.rs
+Struct Name: Config
+Declaration:
+struct Config {
+    /// The client ID string sent at the beginning of the protocol.
+    pub client_id: SshId,
+    /// The bytes and time limits before key re-exchange.
+    pub limits: Limits,
+    /// The initial size of a channel (used for flow control).
+    pub window_size: u32,
+    /// The maximal size of a single packet.
+    pub maximum_packet_size: u32,
+    /// Lists of preferred algorithms.
+    pub preferred: negotiation::Preferred,
+    /// Time after which the connection is garbage-collected.
+    pub inactivity_timeout: Option<std::time::Duration>,
+    /// If nothing is received from the server for this amount of time, send a keepalive message.
+    pub keepalive_interval: Option<std::time::Duration>,
+    /// If this many keepalives have been sent without reply, close the connection.
+    pub keepalive_max: usize,
+    /// Whether to expect and wait for an authentication call.
+    pub anonymous: bool,
+}
+
+------------------------------
+
+File: channels/channel_ref.rs
+Struct Name: ChannelRef
+Declaration:
+struct ChannelRef {
+    pub(super) sender: UnboundedSender<ChannelMsg>,
+    pub(super) window_size: Arc<Mutex<u32>>,
+}
+
+------------------------------
+
